@@ -2,7 +2,7 @@ library(readxl)
 library(dplyr)
 
 #read the original file
-data <- read_excel("Merged_Salary_ProfDemos_Blinded.xlsx")
+data <- read_excel("FILE NAME")
 
 #remove $ and , from the salary (and make it a number)
 data$`Annual Wages` <- as.numeric(gsub('[$,]', '', data$`Annual Wages`))
@@ -20,4 +20,4 @@ colsToRemove <- c('Emplid', 'Birth Date', 'Employer', 'IPEDS Ethnicity', 'Source
 data <- subset(data, select = !(names(data) %in% colsToRemove)) 
 
 #export cleaned data
-write.csv(data, "C:/Users/Iris/Desktop/Capstone/profData.csv",  row.names=FALSE)
+write.csv(data, "FILE PATH",  row.names=FALSE)
