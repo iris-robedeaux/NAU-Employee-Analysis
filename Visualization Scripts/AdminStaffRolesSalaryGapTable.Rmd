@@ -1,0 +1,86 @@
+---
+title: "Untitled"
+author: "Rosa Pacheco"
+date: "2025-04-24"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(ggplot2)
+library(scales)
+library(showtext)
+library(gt)
+showtext_auto()
+font_add("Franklin Gothic Medium", "C:/Windows/Fonts/framd.ttf")
+
+# Load data
+employeeData <- read.csv( "employeeData.csv")
+
+# Preprocessing
+employeeData <- employeeData %>%
+  mutate(
+    employment_status = case_when(
+      Admin == 1 | Faculty == 1 | Staff == 1 ~ "Full-Time",
+      PartTimeFaculty == 1 | PartTimeStaff == 1 ~ "Part-Time",
+      TRUE ~ "Other"
+    ),
+    Ethnicity_Grouped = case_when(
+      Ethnicity %in% c("White", "Hispanic/Latino", "Black/African American", "Asian", "American Indian/Alaska Native") ~ Ethnicity,
+      TRUE ~ "Other"
+    ),
+    JobCategory = case_when(
+      Faculty == 1 ~ "Faculty",
+      Admin == 1 ~ "Admin",
+      Staff == 1 ~ "Staff",
+      TRUE ~ NA_character_
+    )
+  )
+# Step 1: Get Top 10 Staff Titles
+top_staff_titles <- employeeData %>%
+  filter(JobCategory == "Staff", !is.na(Title), Sex %in% c("Male", "Female")) %>%
+  count(Title) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 10) %>%
+  pull(Title)
+
+# Step 2: Compute Median Salary and Gender Gap
+staff_salary_gap <- employeeData %>%
+  filter(
+    JobCategory == "Staff",
+    Title %in% top_staff_titles,
+    Sex %in% c("Male", "Female"),
+    !is.na(AY.Salary)
+  ) %>%
+  group_by(Title, Sex) %>%
+  dplyr::summarise(median_salary = median(AY.Salary, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = Sex, values_from = median_salary) %>%
+  mutate(
+    Gap = Male - Female
+  ) %>%
+  filter(!is.na(Gap)) %>%
+  mutate(Title = fct_reorder(factor(Title), Gap))
+
+
+
+# Step 3: Prepare gap table
+staff_salary_gap_table <- staff_salary_gap %>%
+  mutate(
+    Title = if_else(Title == "Residence Hall Director", 
+                    "Campus Living Community Coordinator", 
+                    as.character(Title))  ) %>%
+  select(
+    Title,
+    `Median Salary (Female)` = Female,
+    `Median Salary (Male)` = Male,
+    `Gap (Male - Female)` = Gap
+  ) %>%
+  arrange(desc(`Gap (Male - Female)`))
+
+staff_salary_gap_table 
+```
