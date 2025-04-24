@@ -1,0 +1,111 @@
+---
+title: "Untitled"
+author: "Rosa Pacheco"
+date: "2025-04-24"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(janitor)
+library(scales)
+library(showtext)
+
+# Enable custom fonts
+showtext_auto()
+font_add("Franklin Gothic Medium", "C:/Windows/Fonts/framd.ttf")
+
+# Load and clean data
+df <- read.csv("employeeData.csv")
+df <- clean_names(df)
+
+# Define stack order (bottom to top of bar)
+stack_order <- c(
+  "Other",
+  "American Indian/Alaska Native",
+  "Asian",
+  "Black/African American",
+  "Hispanic/Latino",
+  "White"
+)
+
+# Color palette in stack order
+colorPalette <- c(
+  "Other" = "#FFB525",
+  "American Indian/Alaska Native" = "#FFD85A",
+  "Asian" = "#FFE1E0",
+  "Black/African American" = "#FFA9E0",
+  "Hispanic/Latino" = "#FA67B8",
+  "White" = "#F00EB9"
+)
+
+# Filter and group data
+df <- df %>%
+  filter(
+    part_time_staff == 0,
+    admin == 1 | staff == 1 | faculty == 1
+  ) %>%
+  mutate(
+    ethnicity_grouped = ifelse(ethnicity %in% names(colorPalette), ethnicity, "Other"),
+    ethnicity_grouped = factor(ethnicity_grouped, levels = stack_order)
+  )
+
+# Calculate percentage of hires per year by ethnicity
+hires_by_ethnicity_pct <- df %>%
+  filter(!is.na(year), !is.na(ethnicity_grouped)) %>%
+  group_by(year, ethnicity_grouped) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  group_by(year) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+# Create the plot
+p <- ggplot(hires_by_ethnicity_pct, aes(x = factor(year), y = percentage, fill = ethnicity_grouped)) +
+  geom_col(width = 0.5) +  # Thinner bars
+  annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf, color = "lightgrey", size = 0.7) +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(labels = percent_format(scale = 1), expand = expansion(mult = c(0, 0.02))) +
+  scale_fill_manual(values = colorPalette) +
+  labs(
+    title = "Percentage of Employees Hired by Ethnicity Each Year",
+    subtitle = "Full-Time Hires Only (2017–2023)",
+    x = "Year",
+    y = "Percentage of Hires",
+    fill = "Ethnicity"
+  ) +
+  guides(fill = guide_legend(nrow = 1)) +
+  theme_minimal(base_size = 16, base_family = "Franklin Gothic Medium") +
+  theme(
+    panel.grid.major.y = element_line(color = "grey", size = 0.5),
+    panel.grid.major.x = element_line(color = "grey", size = 0.5),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(color = "black", linewidth = 1),
+    axis.line.y = element_line(color = "black", linewidth = 1),
+    panel.border = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    legend.background = element_rect(fill = "white", color = NA),
+    axis.ticks = element_blank(),
+    axis.text = element_text(color = "black", size = 16),
+    axis.title = element_text(face = "bold", size = 20),
+    plot.title = element_text(face = "bold", size = 35, hjust = 0.5),
+    plot.subtitle = element_text(size = 20, hjust = 0.5),
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.justification = "center",
+    legend.box.margin = margin(b = 10),
+    legend.spacing.x = unit(0.5, "cm"),
+    legend.title = element_text(face = "bold", size = 18),
+    legend.text = element_text(size = 17),
+    legend.key.height = unit(0.6, "cm"),
+    legend.key.width = unit(0.8, "cm"),
+    plot.margin = margin(t = 50, r = 20, b = 20, l = 20)
+  )
+p
+
+
+```
